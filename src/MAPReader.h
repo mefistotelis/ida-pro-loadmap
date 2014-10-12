@@ -27,7 +27,8 @@ typedef enum {
     MSVC_MAP,
     BCCL_NAM_MAP,
     BCCL_VAL_MAP,
-    WATCOM_MAP
+    WATCOM_MAP,
+    GCC_MAP
 } SectionType;
 
 typedef enum {
@@ -59,7 +60,11 @@ MapFile::SectionType recognizeSectionStart(const char *pLine, size_t lineLen);
 MapFile::SectionType recognizeSectionEnd(MapFile::SectionType secType, const char *pLine, size_t lineLen);
 MapFile::ParseResult parseMsSymbolLine(MapFile::MAPSymbol &sym, const char *pLine, size_t lineLen, size_t minLineLen, size_t numOfSegs);
 MapFile::ParseResult parseWatcomSymbolLine(MapFile::MAPSymbol &sym, const char *pLine, size_t lineLen, size_t minLineLen, size_t numOfSegs);
+MapFile::ParseResult parseGccSymbolLine(MapFile::MAPSymbol &sym, const char *pLine, size_t lineLen, size_t minLineLen, size_t numOfSegs);
 
 };
+
+// Converts address in linear form into seg:offs, using IDA sections list
+void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr);
 
 #endif

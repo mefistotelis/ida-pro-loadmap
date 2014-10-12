@@ -539,7 +539,7 @@
 			<target name="all" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>make</buildCommand>
 				<buildArguments/>
-				<buildTarget>all IDA=C:/usr/IDA/idasdk61/</buildTarget>
+				<buildTarget>all IDA=C:/usr/IDA/idasdk62/</buildTarget>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>true</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
@@ -547,7 +547,7 @@
 			<target name="clean" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
 				<buildCommand>make</buildCommand>
 				<buildArguments/>
-				<buildTarget>clean IDA=C:/usr/IDA/idasdk61/</buildTarget>
+				<buildTarget>clean IDA=C:/usr/IDA/idasdk62/</buildTarget>
 				<stopOnError>true</stopOnError>
 				<useDefaultCommand>true</useDefaultCommand>
 				<runAllBuilders>true</runAllBuilders>
