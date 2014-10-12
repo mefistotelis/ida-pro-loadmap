@@ -6,7 +6,8 @@
 ///     Based on the idea of loadmap plugin by Toshiyuki Tega.
 /// @author TQN <truong_quoc_ngan@yahoo.com>
 /// @author TL <mefistotelis@gmail.com>
-/// @date 2004.09.11 - 2011.09.13
+/// @date 2004.09.11 - 2012.07.18
+/// @version 1.2 - 2012.07.18 - Loading GCC MAP files, compiling in IDA 6.2
 /// @version 1.1 - 2011.09.13 - Loading Watcom MAP files, compiling in IDA 6.1
 /// @version 1.0 - 2004.09.11 - Initial release
 /// @par  Copying and copyrights:
@@ -15,15 +16,30 @@
 ///     the Free Software Foundation; either version 2 of the License, or
 ///     (at your option) any later version.
 ////////////////////////////////////////////////////////////////////////////////
-#define PLUG_VERSION "1.1"
+#define PLUG_VERSION "1.2"
 
 //  standard library headers.
 #include <cstdio>
+// Makes gcc stdlib to not define non-underscored versions of non-ANSI functions (ie memicmp, strlwr)
+#define _NO_OLDNAMES
 #include <cstring>
+#undef _NO_OLDNAMES
 
 //  other headers.
 #include  "MAPReader.h"
 #include "stdafx.h"
+
+#define USE_STANDARD_FILE_FUNCTIONS
+#define USE_DANGEROUS_FUNCTIONS
+
+// IDA SDK Header Files
+#include <ida.hpp>
+#include <idp.hpp>
+#include <loader.hpp>
+#include <bytes.hpp>
+#include <name.hpp>
+#include <entry.hpp>
+#include <fpro.h>
 
 typedef struct _tagPLUGIN_OPTIONS {
     bool bNameApply;    //< true - apply to name, false - apply to comment
@@ -46,28 +62,16 @@ static char g_szLoadMapSection[] = "LoadMap";
 static char g_szOptionsKey[] = "Options";
 /// @}
 
-////////////////////////////////////////////////////////////////////////////////
-/// @brief Changes extension in given file name buffer
-/// @return void
-/// @author TL
-/// @date 2011.08.07
- ////////////////////////////////////////////////////////////////////////////////
-static void pathExtensionSwitch(char * fname, const char * newext, size_t fnbuf_len)
+void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr)
 {
-    size_t len,extlen;
-    char * target;
-    char * mintarget;
-    len = std::strlen(fname);
-    target = std::strrchr(fname,'.');
-    mintarget = std::strpbrk(fname,":\\/");
-    if ( (target == NULL) || (target <= mintarget) )
-        target = fname+len;
-    extlen = std::strlen(newext);
-    // If end of the buffer
-    if (target+extlen+1 >= fname+fnbuf_len)
-        return;
-    qstrncpy(target, newext, extlen+1);
+    sym.seg = segs.get_area_num(linear_addr);
+    segment_t * sseg = getnseg((int) sym.seg);
+    if (sseg != NULL)
+        sym.addr = linear_addr - sseg->startEA;
+    else
+        sym.addr = -1;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Output a formatted string to messages window [analog of printf()]
@@ -275,7 +279,7 @@ void idaapi run(int /* arg */)
             MapFile::ParseResult parsed;
             prvsym.seg = sym.seg;
             prvsym.addr = sym.addr;
-            qstrncpy(prvsym.name,sym.name,sizeof(sym.name));
+            strncpy(prvsym.name,sym.name,sizeof(sym.name));
             sym.seg = SREG_NUM;
             sym.addr = BADADDR;
             sym.name[0] = '\0';
@@ -293,6 +297,9 @@ void idaapi run(int /* arg */)
                 break;
             case MapFile::WATCOM_MAP:
                 parsed = parseWatcomSymbolLine(sym,pLine,lineLen,g_minLineLen,numOfSegs);
+                break;
+            case MapFile::GCC_MAP:
+                parsed = parseGccSymbolLine(sym,pLine,lineLen,g_minLineLen,numOfSegs);
                 break;
             }
 
@@ -404,7 +411,7 @@ void idaapi run(int /* arg */)
     else
     {
         // Save file name for next askfile_c dialog
-        qstrncpy(mapFileName, fname, sizeof(mapFileName));
+        strncpy(mapFileName, fname, sizeof(mapFileName));
 
         // Show the result
         msg("Result of loading and parsing the Map file '%s'\n"

@@ -18,6 +18,7 @@
 #include  <cstring>
 #include  <cctype>
 #include  <cassert>
+#include  <cstdlib>
 
 #include "stdafx.h"
 
@@ -37,6 +38,13 @@ const char WATCOM_END_TABLE_HDR[]  = "+----------------------+";
 const char MSVC_LINE_NUMBER[]      = "Line numbers for ";
 const char MSVC_FIXUP[]            = "FIXUPS: ";
 const char MSVC_EXPORTS[]          = " Exports";
+const char GCC_MEMMAP_START[]      = "Linker script and memory map";
+const char GCC_MEMMAP_SKIP1[]       = ".";
+const char GCC_MEMMAP_SKIP2[]       = " .";
+const char GCC_MEMMAP_SKIP3[]       = "*";
+const char GCC_MEMMAP_SKIP4[]       = " *";
+const char GCC_MEMMAP_END[]        = "OUTPUT(";
+const char GCC_MEMMAP_LOAD[]       = "LOAD ";
 
 /// @}
 
@@ -51,23 +59,22 @@ const char MSVC_EXPORTS[]          = " Exports";
 /// @author TQN
 /// @date 2004.09.12
 ////////////////////////////////////////////////////////////////////////////////
-MapFile::MAPResult MapFile::openMAP(const char * lpszFileName, char * &lpMapAddr, size_t &dwSize)
+MapFile::MAPResult MapFile::openMAP(const char * fileName, char * &mapAddr, size_t &dwSize)
 {
     // Set default values for output parameters
-    lpMapAddr = NULL;
+    mapAddr = NULL;
     dwSize = INVALID_FILE_SIZE;
 
     // Validate all input pointer parameters
-    assert(NULL != lpszFileName);
-    assert(FALSE == IsBadStringPtr(lpszFileName, (UINT_PTR) -1));
-    if ((NULL == lpszFileName) || IsBadStringPtr(lpszFileName, (UINT_PTR) -1))
+    assert(NULL != fileName);
+    if (NULL == fileName)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return WIN32_ERROR;
     }
 
     // Open the file
-    HANDLE hFile = CreateFile(lpszFileName, GENERIC_READ, FILE_SHARE_READ, NULL,
+    HANDLE hFile = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ, NULL,
                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (INVALID_HANDLE_VALUE == hFile)
     {
@@ -92,8 +99,8 @@ MapFile::MAPResult MapFile::openMAP(const char * lpszFileName, char * &lpMapAddr
     // Mapping creation successful, do not need file handle anymore
     WIN32CHECK(CloseHandle(hFile));
 
-    lpMapAddr = (LPSTR) MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, dwSize);
-    if (NULL == lpMapAddr)
+    mapAddr = (LPSTR) MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, dwSize);
+    if (NULL == mapAddr)
     {
         WIN32CHECK(CloseHandle(hMap));
         return WIN32_ERROR;
@@ -102,11 +109,11 @@ MapFile::MAPResult MapFile::openMAP(const char * lpszFileName, char * &lpMapAddr
     // Map View successful, do not need the map handle anymore
     WIN32CHECK(CloseHandle(hMap));
 
-    if (NULL != memchr(lpMapAddr, 0, dwSize))
+    if (NULL != memchr(mapAddr, 0, dwSize))
     {
         // File is binary or Unicode file
-        WIN32CHECK(UnmapViewOfFile(lpMapAddr));
-        lpMapAddr = NULL;
+        WIN32CHECK(UnmapViewOfFile(mapAddr));
+        mapAddr = NULL;
         return FILE_BINARY_ERROR;
     }
 
@@ -188,6 +195,8 @@ MapFile::SectionType MapFile::recognizeSectionStart(const char *pLine, size_t li
         return MapFile::BCCL_VAL_MAP;
     if (strncasecmp(pLine, WATCOM_MEMMAP_START, lineLen) == 0)
         return MapFile::WATCOM_MAP;
+    if (strncasecmp(pLine, GCC_MEMMAP_START, lineLen) == 0)
+        return MapFile::GCC_MAP;
     return MapFile::NO_SECTION;
 }
 
@@ -202,14 +211,28 @@ MapFile::SectionType MapFile::recognizeSectionStart(const char *pLine, size_t li
 ////////////////////////////////////////////////////////////////////////////////
 MapFile::SectionType MapFile::recognizeSectionEnd(MapFile::SectionType secType, const char *pLine, size_t lineLen)
 {
-    if (strncmp(pLine, MSVC_LINE_NUMBER, std::strlen(MSVC_LINE_NUMBER)) == 0)
-        return MapFile::NO_SECTION;
-    if (strncmp(pLine, MSVC_FIXUP, std::strlen(MSVC_FIXUP)) == 0)
-        return MapFile::NO_SECTION;
-    if (strncmp(pLine, MSVC_EXPORTS, std::strlen(MSVC_EXPORTS)) == 0)
-        return MapFile::NO_SECTION;
-    if (strncmp(pLine, WATCOM_END_TABLE_HDR, std::strlen(WATCOM_END_TABLE_HDR)) == 0)
-        return MapFile::NO_SECTION;
+    switch (secType)
+    {
+    case MapFile::MSVC_MAP:
+        if (strncmp(pLine, MSVC_LINE_NUMBER, std::strlen(MSVC_LINE_NUMBER)) == 0)
+            return MapFile::NO_SECTION;
+        if (strncmp(pLine, MSVC_FIXUP, std::strlen(MSVC_FIXUP)) == 0)
+            return MapFile::NO_SECTION;
+        if (strncmp(pLine, MSVC_EXPORTS, std::strlen(MSVC_EXPORTS)) == 0)
+            return MapFile::NO_SECTION;
+        break;
+    case MapFile::BCCL_NAM_MAP:
+    case MapFile::BCCL_VAL_MAP:
+        break;
+    case MapFile::WATCOM_MAP:
+        if (strncmp(pLine, WATCOM_END_TABLE_HDR, std::strlen(WATCOM_END_TABLE_HDR)) == 0)
+            return MapFile::NO_SECTION;
+        break;
+    case MapFile::GCC_MAP:
+        if (strncmp(pLine, GCC_MEMMAP_END, std::strlen(GCC_MEMMAP_END)) == 0)
+            return MapFile::NO_SECTION;
+        break;
+    }
     return secType;
 }
 
@@ -241,6 +264,7 @@ MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const c
         std::free(dupLine);
         return MapFile::COMMENT_LINE;
     }
+    sym.addr = -1;
     int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
     std::free(dupLine);
     if (3 != ret)
@@ -249,7 +273,7 @@ MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const c
         return MapFile::FINISHING_LINE;
     }
     else if ((0 == sym.seg) || (--sym.seg >= numOfSegs) ||
-            (BADADDR == sym.addr) || (std::strlen(sym.name) == 0) )
+            (-1 == sym.addr) || (std::strlen(sym.name) == 0) )
     {
         return MapFile::INVALID_LINE;
     }
@@ -306,7 +330,72 @@ MapFile::ParseResult MapFile::parseWatcomSymbolLine(MapFile::MAPSymbol &sym, con
         return MapFile::FINISHING_LINE;
     }
     else if ((0 == sym.seg) || (--sym.seg >= numOfSegs) ||
-            (BADADDR == sym.addr) || (std::strlen(sym.name) == 0) )
+            (-1 == sym.addr) || (std::strlen(sym.name) == 0) )
+    {
+        return MapFile::INVALID_LINE;
+    }
+    // Ensure name is NULL terminated
+    sym.name[MAXNAMELEN] = '\0';
+    return MapFile::SYMBOL_LINE;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// @brief Reads one entry of GCC-like MAP file.
+/// @param sym Target  buffer for symbol data.
+/// @param  pLine Pointer to start of buffer
+/// @param  lineLen Length of the current line
+/// @param  minLineLen Minimal accepted length of line
+/// @param numOfSegs Number of segments in IDA, used to verify segment number range
+/// @return Result of the parsing
+/// @author TL
+/// @date 2012.07.18
+////////////////////////////////////////////////////////////////////////////////
+MapFile::ParseResult MapFile::parseGccSymbolLine(MapFile::MAPSymbol &sym, const char *pLine, size_t lineLen, size_t minLineLen, size_t numOfSegs)
+{
+    // Get segment number, address, name, by pass spaces at beginning,
+    // between ':' character, between address and name
+    long lineCut = lineLen;
+    if (lineCut > MAXNAMELEN + minLineLen)
+        lineCut = MAXNAMELEN + minLineLen;
+    char * dupLine = (char *)std::malloc(lineCut+1);
+    strncpy(dupLine,pLine,lineCut);
+    dupLine[lineCut] = '\0';
+    if (strncasecmp(dupLine, ";", 1) == 0)
+    {
+        strncpy(sym.name,dupLine+1,MAXNAMELEN-1);
+        sym.name[MAXNAMELEN] = '\0';
+        std::free(dupLine);
+        return MapFile::COMMENT_LINE;
+    }
+    if ( (strncasecmp(dupLine, GCC_MEMMAP_SKIP1, std::strlen(GCC_MEMMAP_SKIP1)) == 0) ||
+         (strncasecmp(dupLine, GCC_MEMMAP_SKIP2, std::strlen(GCC_MEMMAP_SKIP2)) == 0) )
+    {
+        std::free(dupLine);
+        return MapFile::SKIP_LINE;
+    }
+    if ( (strncasecmp(dupLine, GCC_MEMMAP_SKIP3, std::strlen(GCC_MEMMAP_SKIP3)) == 0) ||
+         (strncasecmp(dupLine, GCC_MEMMAP_SKIP4, std::strlen(GCC_MEMMAP_SKIP4)) == 0) )
+    {
+        std::free(dupLine);
+        return MapFile::SKIP_LINE;
+    }
+    if (strncasecmp(dupLine, GCC_MEMMAP_LOAD, std::strlen(GCC_MEMMAP_LOAD)) == 0)
+    {
+        strncpy(sym.name,dupLine,MAXNAMELEN-1);
+        sym.name[MAXNAMELEN] = '\0';
+        std::free(dupLine);
+        return MapFile::COMMENT_LINE;
+    }
+    unsigned long linear_addr;
+    int ret = sscanf(dupLine, " 0x%08X%*c %[^\t\n;]", &linear_addr, sym.name);
+    std::free(dupLine);
+    if (2 != ret)
+    {
+        // we have parsed to end of value/name symbols table or reached EOF
+        return MapFile::FINISHING_LINE;
+    }
+    linearAddressToSymbolAddr(sym, linear_addr);
+    if ((sym.seg >= numOfSegs) || (-1 == sym.addr) || (std::strlen(sym.name) == 0) )
     {
         return MapFile::INVALID_LINE;
     }

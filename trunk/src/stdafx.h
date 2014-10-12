@@ -35,17 +35,7 @@
 #include <shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
-#define USE_STANDARD_FILE_FUNCTIONS
-#define USE_DANGEROUS_FUNCTIONS
-
-// IDA SDK Header Files
-#include <ida.hpp>
-#include <idp.hpp>
-#include <loader.hpp>
-#include <bytes.hpp>
-#include <name.hpp>
-#include <entry.hpp>
-#include <fpro.h>
+void pathExtensionSwitch(char * fname, const char * newext, size_t fnbuf_len);
 
 #ifdef _DEBUG
     #define _VERIFY(x)  _ASSERTE(x)
