@@ -2,8 +2,10 @@
 
 = Here are the builds =
 
-loadmap_v1_2_ida_plug.7z 65 KB
+=== loadmap_v1_2_ida_plug.7z 65 KB ===
+
 https://mega.co.nz/#!hQcTTJTJ!j2BJBlOG3AwyaZu__gbNST1MhGPKkQDdEIIorwkSnro
 
-loadmap_v1_1_ida_plug.zip 68 KB
+=== loadmap_v1_1_ida_plug.zip 68 KB ===
+
 https://mega.co.nz/#!JI1wTZqY!FQ8lVzbG-VqQjhsMvCpLwY87MVlS9sSioB03SFMLUU0
