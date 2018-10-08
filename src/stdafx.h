@@ -20,6 +20,8 @@
 #define _OBJC_NO_COM
 //#define WINSHLWAPI
 #define NOGDI
+//#define _X86_
+#define _AMD64_
 #include <windef.h>
 #include <basetyps.h>
 #include <cstdarg>
@@ -35,20 +37,12 @@
 #include <shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
+#define strncasecmp strnicmp
+
 void pathExtensionSwitch(char * fname, const char * newext, size_t fnbuf_len);
 
-#ifdef _DEBUG
-    #define _VERIFY(x)  _ASSERTE(x)
-
-    #define WIN32CHECK(x)   { \
-        DWORD __dwErr__ = GetLastError(); \
-        _ASSERTE(x); \
-        SetLastError(__dwErr__); \
-    };
-#else
     #define _VERIFY(x)  (x)
     #define WIN32CHECK(x)   (x)
-#endif
 
 #endif //!STDAFX_H_
 ////////////////////////////////////////////////////////////////////////////////

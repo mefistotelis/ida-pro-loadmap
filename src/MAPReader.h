@@ -5,7 +5,7 @@
 ///     Library for loading MAP file entries.
 /// @author TQN <truong_quoc_ngan@yahoo.com>
 /// @author TL <mefistotelis@gmail.com>
-/// @date 2004.09.11 - 2011.09.13
+/// @date 2004.09.11 - 2018.11.08
 /// @par  Copying and copyrights:
 ///     This program is free software; you can redistribute it and/or modify
 ///     it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #include  <cstdio>
 
 #define MAXNAMELEN      512
+#define INVALID_MAPFILE_SIZE	(0xffffffff)
 
 namespace MapFile {
 

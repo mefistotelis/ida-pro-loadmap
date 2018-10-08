@@ -2,13 +2,12 @@ IDA Pro plugin
 Loads a VC/Borland/Dede/GCC/IDA map file into IDA Database.
 The ".map" file may be generated during compilation, and contain some of debug info (function names, global variables).
 
-This plugin was compiled with IDA 6.2 SDK, compiler - GCC 4.8.0; it is 32-bit.
-IDA SDK required small patch to cooperate with that gcc - it is within src.
+This plugin was compiled with IDA 7.0 SDK, compiler - Visual Studio 2010; it is 32-bit.
 
 See src/LoadMap.cpp for credits, license and changelog.
 
 Installation:
-* Copy LoadMAP.plw to IDA plugins folder
+* Copy loadmap.dll to IDA plugins folder
 * Open any PE/LE file project
 * Click Load MAP with Shift to see options
 

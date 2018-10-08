@@ -6,7 +6,8 @@
 ///     Based on the idea of loadmap plugin by Toshiyuki Tega.
 /// @author TQN <truong_quoc_ngan@yahoo.com>
 /// @author TL <mefistotelis@gmail.com>
-/// @date 2004.09.11 - 2012.07.18
+/// @date 2004.09.11 - 2018.11.08
+/// @version 1.3 - 2018.11.08 - Compiling in VS2010, SDK from IDA 7.0
 /// @version 1.2 - 2012.07.18 - Loading GCC MAP files, compiling in IDA 6.2
 /// @version 1.1 - 2011.09.13 - Loading Watcom MAP files, compiling in IDA 6.1
 /// @version 1.0 - 2004.09.11 - Initial release
@@ -16,8 +17,7 @@
 ///     the Free Software Foundation; either version 2 of the License, or
 ///     (at your option) any later version.
 ////////////////////////////////////////////////////////////////////////////////
-#define PLUG_VERSION "1.2"
-
+#define PLUG_VERSION "1.3"
 //  standard library headers.
 #include <cstdio>
 // Makes gcc stdlib to not define non-underscored versions of non-ANSI functions (ie memicmp, strlwr)
@@ -29,31 +29,41 @@
 #include  "MAPReader.h"
 #include "stdafx.h"
 
-#define USE_STANDARD_FILE_FUNCTIONS
-#define USE_DANGEROUS_FUNCTIONS
+//#define USE_STANDARD_FILE_FUNCTIONS
+//#define USE_DANGEROUS_FUNCTIONS
 
 // IDA SDK Header Files
 #include <ida.hpp>
 #include <idp.hpp>
 #include <loader.hpp>
+#include <kernwin.hpp>
+#include <diskio.hpp>
 #include <bytes.hpp>
 #include <name.hpp>
 #include <entry.hpp>
 #include <fpro.h>
+#include <prodir.h> // just for MAXPATH
+
 
 typedef struct _tagPLUGIN_OPTIONS {
-    bool bNameApply;    //< true - apply to name, false - apply to comment
-    bool bReplace;      //< replace the existing name or comment
-    bool bVerbose;      //< show detail messages
+    int bNameApply;    //< true - apply to name, false - apply to comment
+    int bReplace;      //< replace the existing name or comment
+    int bVerbose;      //< show detail messages
 } PLUGIN_OPTIONS;
 
 const size_t g_minLineLen = 14; // For a "xxxx:xxxxxxxx " line
 
-static HINSTANCE g_hinstPlugin = NULL;
-static char g_szIniPath[MAX_PATH] = { 0 };
+static char g_szIniPath[MAXPATH] = { 0 };
 
 /// @brief Global variable for options of plugin
 static PLUGIN_OPTIONS g_options = { 0 };
+
+static const cfgopt_t g_optsinfo[] =
+{
+	cfgopt_t("NAME_APPLY", &g_options.bNameApply, 0, 1),
+    cfgopt_t("REPLACE_EXISTING", &g_options.bReplace, 0, 1),
+	cfgopt_t("VERBOSE_MESSAGES", &g_options.bVerbose, 0, 1),
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @name Ini Section and Key names
@@ -64,10 +74,10 @@ static char g_szOptionsKey[] = "Options";
 
 void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr)
 {
-    sym.seg = segs.get_area_num(linear_addr);
+    sym.seg = get_segm_num(linear_addr);
     segment_t * sseg = getnseg((int) sym.seg);
     if (sseg != NULL)
-        sym.addr = linear_addr - sseg->startEA;
+        sym.addr = linear_addr - sseg->start_ea;
     else
         sym.addr = -1;
 }
@@ -113,7 +123,7 @@ static void showOptionsDlg(void)
     short name = (g_options.bNameApply ? 0 : 1);
     short replace = (g_options.bReplace ? 1 : 0);
     short verbose = (g_options.bVerbose ? 1 : 0);
-    if (AskUsingForm_c(format, &name, &replace, &verbose))
+    if (ask_form(format, &name, &replace, &verbose))
     {
         g_options.bNameApply = (0 == name);
         g_options.bReplace = (1 == replace);
@@ -131,16 +141,13 @@ int idaapi init(void)
 {
     msg("\nLoadMap: Plugin v%s init.\n\n",PLUG_VERSION);
 
-    // Get the full path of plugin
-    WIN32CHECK(GetModuleFileName(g_hinstPlugin, g_szIniPath, sizeof(g_szIniPath)));
+    // Get the full path to user config dir
+	qstrncpy(g_szIniPath, get_user_idadir(), sizeof(g_szIniPath));
+	qstrncat(g_szIniPath, "loadmap.cfg", sizeof(g_szIniPath));
     g_szIniPath[sizeof(g_szIniPath) - 1] = '\0';
 
-    // Change the extension of plugin to '.ini'
-    pathExtensionSwitch(g_szIniPath, ".ini", sizeof(g_szIniPath));
-
-    // Get options saved in ini file
-    _VERIFY(GetPrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey,
-                                    &g_options, sizeof(g_options), g_szIniPath));
+    // Get options saved in cfg file
+    read_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo), NULL);
 
     switch (inf.filetype)
     {
@@ -162,7 +169,7 @@ int idaapi init(void)
 /// @author TQN
 /// @date 2004.09.11
 ////////////////////////////////////////////////////////////////////////////////
-void idaapi run(int /* arg */)
+bool idaapi run(size_t)
 {
     static char mapFileName[_MAX_PATH] = { 0 };
 
@@ -176,7 +183,7 @@ void idaapi run(int /* arg */)
     if (0 == numOfSegs)
     {
         warning("Not found any segments");
-        return;
+        return false;
     }
 
     if ('\0' == mapFileName[0])
@@ -187,31 +194,31 @@ void idaapi run(int /* arg */)
     }
 
     // Show open map file dialog
-    char *fname = askfile_c(0, mapFileName, "Open MAP file");
+    char *fname = ask_file(0, mapFileName, "Open MAP file");
     if (NULL == fname)
     {
         msg("LoadMap: User cancel\n");
-        return;
+        return false;
     }
 
     // Open the map file
     char * pMapStart = NULL;
-    size_t mapSize = INVALID_FILE_SIZE;
+    size_t mapSize = INVALID_MAPFILE_SIZE;
     MapFile::MAPResult eRet = MapFile::openMAP(fname, pMapStart, mapSize);
     switch (eRet)
     {
         case MapFile::WIN32_ERROR:
             warning("Could not open file '%s'.\nWin32 Error Code = 0x%08X",
                     fname, GetLastError());
-            return;
+            return false;
 
         case MapFile::FILE_EMPTY_ERROR:
             warning("File '%s' is empty, zero size", fname);
-            return;
+            return false;
 
         case MapFile::FILE_BINARY_ERROR:
             warning("File '%s' seem to be a binary or Unicode file", fname);
-            return;
+            return false;
 
         case MapFile::OPEN_NO_ERROR:
         default:
@@ -279,7 +286,7 @@ void idaapi run(int /* arg */)
             MapFile::ParseResult parsed;
             prvsym.seg = sym.seg;
             prvsym.addr = sym.addr;
-            strncpy(prvsym.name,sym.name,sizeof(sym.name));
+            qstrncpy(prvsym.name,sym.name,sizeof(sym.name));
             sym.seg = SREG_NUM;
             sym.addr = BADADDR;
             sym.name[0] = '\0';
@@ -311,7 +318,7 @@ void idaapi run(int /* arg */)
             }
             if (parsed == MapFile::FINISHING_LINE)
             {
-                sectnHdr == MapFile::NO_SECTION;
+                sectnHdr = MapFile::NO_SECTION;
                 // we have parsed to end of value/name symbols table or reached EOF
                 qsnprintf(fmt, sizeof(fmt), "Parsing finished at line: '%%.%ds'.\n", lineLen);
                 showMsg(fmt, pLine);
@@ -354,8 +361,8 @@ void idaapi run(int /* arg */)
                 bNameApply = false;
             }
 
-            unsigned long la = sym.addr + getnseg((int) sym.seg)->startEA;
-            flags_t f = getFlags(la);
+            unsigned long la = sym.addr + getnseg((int) sym.seg)->start_ea;
+            flags_t f = get_full_flags(la);
 
             if (bNameApply) // Apply symbols for name
             {
@@ -411,7 +418,7 @@ void idaapi run(int /* arg */)
     else
     {
         // Save file name for next askfile_c dialog
-        strncpy(mapFileName, fname, sizeof(mapFileName));
+        qstrncpy(mapFileName, fname, sizeof(mapFileName));
 
         // Show the result
         msg("Result of loading and parsing the Map file '%s'\n"
@@ -419,6 +426,7 @@ void idaapi run(int /* arg */)
             "   Number of Invalid Symbols: %d\n\n",
             fname, validSyms, invalidSyms);
     }
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -432,8 +440,8 @@ void idaapi term(void)
     msg("LoadMap: Plugin v%s terminate.\n",PLUG_VERSION);
 
     // Write the plugin's options to ini file
-    _VERIFY(WritePrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey, &g_options,
-                                      sizeof(g_options), g_szIniPath));
+    /*_VERIFY(WritePrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey, &g_options,
+                                      sizeof(g_options), g_szIniPath));!!!!!*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
