@@ -439,9 +439,12 @@ void idaapi term(void)
 {
     msg("LoadMap: Plugin v%s terminate.\n",PLUG_VERSION);
 
-    // Write the plugin's options to ini file
+    // Write the plugin's options to cfg file
     /*_VERIFY(WritePrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey, &g_options,
-                                      sizeof(g_options), g_szIniPath));!!!!!*/
+                                      sizeof(g_options), g_szIniPath));
+    The old, windows-centric way is now disabled. Instead, we should open g_szIniPath
+    and write config in normal IDA format (like the files in IDA/cfg filder).
+    */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
