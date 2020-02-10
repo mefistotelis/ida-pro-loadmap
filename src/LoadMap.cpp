@@ -372,7 +372,7 @@ bool idaapi run(size_t)
                 if (g_options.bReplace ||
                     (!has_name(f) || has_dummy_name(f) || has_auto_name(f)))
                 {
-                    if (set_name(la, pname, SN_NOWARN))
+                    if (set_name(la, pname, SN_NOCHECK | SN_NOWARN))
                     {
                         showMsg("%04X:%08X - Change name to '%s' succeeded\n",
                             sym.seg, la, pname);
