@@ -158,6 +158,7 @@ static plugmod_t *idaapi init()
     case f_ELF:
     case f_EXE:
     case f_BIN:
+    case f_LOADER:
         return PLUGIN_KEEP;
     }
     return PLUGIN_SKIP;
