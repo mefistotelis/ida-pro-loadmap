@@ -157,6 +157,7 @@ int idaapi init(void)
     case f_LX:
     case f_ELF:
     case f_EXE:
+    case f_BIN:
         return PLUGIN_KEEP;
     }
     return PLUGIN_SKIP;
