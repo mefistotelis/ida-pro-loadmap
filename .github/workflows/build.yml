@@ -23,6 +23,7 @@ jobs:
         os: [windows-2019]
 
     env:
+      SHELLOPTS: igncr
       working-directory: ida-pro-loadmap
 
     steps:
@@ -56,7 +57,8 @@ jobs:
       env:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ github.workspace }}
-      shell: bash
+      # Note: After Cygwin is installed, its bash shell is used.
+      shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
         wget -O "${RUNNER_WORKSPACE}/MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
         "${RUNNER_WORKSPACE}/MEGAcmdSetup.exe" /S
@@ -66,7 +68,7 @@ jobs:
       env:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ github.workspace }}
-      shell: bash
+      shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
         mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" ${{ env.RUNNER_WORKSPACE }}
 
@@ -74,7 +76,7 @@ jobs:
       env:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ github.workspace }}
-      shell: bash
+      shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
           "${RUNNER_WORKSPACE}/idasdk75.zip"
@@ -82,6 +84,6 @@ jobs:
 
     - name: Build
       working-directory: ${{ runner.workspace }}/
-      shell: bash
+      shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
         make -C ${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap
