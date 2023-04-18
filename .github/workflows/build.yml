@@ -1,4 +1,6 @@
-name: build
+# This workflow will build the IDA Pro plugin
+
+name: Build IDA plugin
 
 on:
   pull_request:
@@ -31,26 +33,47 @@ jobs:
 
     - name: Check secrets
       env: 
-          IDASDK_MEGA_DL: ${{ secrets.IDASDK_MEGA_DL }}
-        working-directory: ${{ env.working-directory }}
+        IDASDK_MEGA_DL: ${{ secrets.IDASDK_MEGA_DL }}
+      working-directory: ${{ github.workspace }}
       if: ${{ env.IDASDK_MEGA_DL == '' }}
-      run: 'echo "echo the secret \"IDASDK_MEGA_DL\" has not been made; echo please go to \"settings \> secrets \> actions\" to create it"'
+      # Note: This uses the bash shell included with Git on Windows.
+      shell: bash
+      run: |
+        echo the secret \"IDASDK_MEGA_DL\" has not been made
+        echo please go to \"settings \> secrets \> actions\" to create it
+        exit 1
 
     - name: Mask the secrets
       run: |
         echo "::add-mask::${{ secrets.IDASDK_MEGA_DL }}" 
 
-    - name: Download IDA Pro SDK
-      # Instead of the usual actions/download-artifact, we are downloading from Mega
-      uses: Difegue/action-megacmd@master
+    - name: Set up Cygwin
+      uses: egor-tensin/setup-cygwin@v4
       with:
-        args: get https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }} ${{ env.GITHUB_WORKSPACE }}
+        packages: wget make
+
+    - name: Prepare for downloading from MEGA
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ github.workspace }}
+      shell: bash
+      run: |
+        wget -O "${RUNNER_WORKSPACE}/MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
+        "${RUNNER_WORKSPACE}/MEGAcmdSetup.exe" /S
+        echo "$LOCALAPPDATA/MEGAcmd" >> $GITHUB_PATH
+
+    - name: Download IDA Pro SDK
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ github.workspace }}
+      shell: bash
+      run: |
+        mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" ${{ env.RUNNER_WORKSPACE }}
 
     - name: Create Build Environment
       env:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ github.workspace }}
-      # Note: This uses the bash shell included with Git on Windows.
       shell: bash
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
