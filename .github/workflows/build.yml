@@ -46,7 +46,7 @@ jobs:
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
       with:
-        packages: wget make
+        packages: wget make sed
 
     - name: Prepare for downloading from MEGA - wget
       env:
@@ -83,6 +83,9 @@ jobs:
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
           "${DL_WORKSPACE}/idasdk75.zip"
+        # Why does the SDK care how many bits the make has?
+        sed -i 's/^\(.*\)\$[\(]error \(Only 32-bit.*\)[\)]$/\1$(warning \2)/' \
+          "${RUNNER_WORKSPACE}/idasdk75/allmake.mak"
         make -C ${RUNNER_WORKSPACE}/idasdk75 V=1 env
 
     - name: Checkout repository
