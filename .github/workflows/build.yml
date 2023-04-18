@@ -1,0 +1,64 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    paths:
+      - src/**
+      - makefile
+      - .github/**
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019]
+
+    env:
+      working-directory: ida-pro-loadmap
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        path: ida-pro-loadmap
+
+    - name: Check secrets
+      env: 
+          IDASDK_MEGA_DL: ${{ secrets.IDASDK_MEGA_DL }}
+        working-directory: ${{ env.working-directory }}
+      if: ${{ env.IDASDK_MEGA_DL == '' }}
+      run: 'echo "echo the secret \"IDASDK_MEGA_DL\" has not been made; echo please go to \"settings \> secrets \> actions\" to create it"'
+
+    - name: Mask the secrets
+      run: |
+        echo "::add-mask::${{ secrets.IDASDK_MEGA_DL }}" 
+
+    - name: Download IDA Pro SDK
+      # Instead of the usual actions/download-artifact, we are downloading from Mega
+      uses: Difegue/action-megacmd@master
+      with:
+        args: get https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }} ${{ env.GITHUB_WORKSPACE }}
+
+    - name: Create Build Environment
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ github.workspace }}
+      # Note: This uses the bash shell included with Git on Windows.
+      shell: bash
+      run: |
+        7z x "-o${RUNNER_WORKSPACE}/" \
+          "${RUNNER_WORKSPACE}/idasdk75.zip"
+        make -C ${RUNNER_WORKSPACE}/idasdk75 env
+
+    - name: Build
+      working-directory: ${{ runner.workspace }}/
+      shell: bash
+      run: |
+        make -C ${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap
