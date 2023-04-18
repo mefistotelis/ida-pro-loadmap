@@ -55,31 +55,33 @@ jobs:
 
     - name: Prepare for downloading from MEGA
       env:
-        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        DL_WORKSPACE: ${{ github.workspace }}/dl
       working-directory: ${{ github.workspace }}
       # Note: After Cygwin is installed, its bash shell is used.
       shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
-        wget -O "${RUNNER_WORKSPACE}/MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
-        "${RUNNER_WORKSPACE}/MEGAcmdSetup.exe" /S
+        mkdir -p "${DL_WORKSPACE}"
+        wget -O "${DL_WORKSPACE}/MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
+        "./dl/MEGAcmdSetup.exe" /S
         echo "$LOCALAPPDATA/MEGAcmd" >> $GITHUB_PATH
 
     - name: Download IDA Pro SDK
       env:
-        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        DL_WORKSPACE: ${{ github.workspace }}/dl
       working-directory: ${{ github.workspace }}
       shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
-        mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" ${{ env.RUNNER_WORKSPACE }}
+        mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
 
     - name: Create Build Environment
       env:
+        DL_WORKSPACE: ${{ github.workspace }}/dl
         RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ github.workspace }}
       shell: bash --login --norc -eo pipefail -o igncr '{0}'
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
-          "${RUNNER_WORKSPACE}/idasdk75.zip"
+          "${DL_WORKSPACE}/idasdk75.zip"
         make -C ${RUNNER_WORKSPACE}/idasdk75 env
 
     - name: Build
