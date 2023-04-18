@@ -69,9 +69,9 @@ jobs:
       env:
         DL_WORKSPACE: ${{ runner.workspace }}\dl
       working-directory: ${{ runner.workspace }}
+      # We are calling batch script here, so cmd is needed as shell
       shell: cmd
       run: |
-        echo %PATH%
         mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
 
     - name: Create Build Environment
@@ -83,7 +83,7 @@ jobs:
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
           "${DL_WORKSPACE}/idasdk75.zip"
-        make -C ${RUNNER_WORKSPACE}/idasdk75 env
+        make -C ${RUNNER_WORKSPACE}/idasdk75 V=1 env
 
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -94,4 +94,4 @@ jobs:
       working-directory: ${{ github.workspace }}/
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
-        make -C ${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap
+        make -C ${RUNNER_WORKSPACE}/idasdk75 V=1 loadmap.dll
