@@ -57,20 +57,21 @@ jobs:
       run: |
         mkdir -p "${DL_WORKSPACE}"
         wget -O "${DL_WORKSPACE}\\MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
-        echo "$LOCALAPPDATA/MEGAcmd" >> $GITHUB_PATH
 
     - name: Prepare for downloading from MEGA - install
       working-directory: ${{ runner.workspace }}
       shell: cmd
       run: |
         "${{ runner.workspace }}\dl\MEGAcmdSetup.exe" /S
+        echo %LOCALAPPDATA%\MEGAcmd>> %GITHUB_PATH%
 
     - name: Download IDA Pro SDK
       env:
         DL_WORKSPACE: ${{ runner.workspace }}\dl
       working-directory: ${{ runner.workspace }}
-      shell: bash --login --norc -eo pipefail '{0}'
+      shell: cmd
       run: |
+        echo %PATH%
         mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
 
     - name: Create Build Environment
