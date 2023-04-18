@@ -27,15 +27,10 @@ jobs:
       working-directory: ida-pro-loadmap
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        path: ida-pro-loadmap
-
     - name: Check secrets
       env: 
         IDASDK_MEGA_DL: ${{ secrets.IDASDK_MEGA_DL }}
-      working-directory: ${{ github.workspace }}
+      working-directory: ${{ runner.workspace }}
       if: ${{ env.IDASDK_MEGA_DL == '' }}
       # Note: This uses the bash shell included with Git on Windows.
       shell: bash
@@ -53,39 +48,49 @@ jobs:
       with:
         packages: wget make
 
-    - name: Prepare for downloading from MEGA
+    - name: Prepare for downloading from MEGA - wget
       env:
-        DL_WORKSPACE: ${{ github.workspace }}/dl
-      working-directory: ${{ github.workspace }}
+        DL_WORKSPACE: ${{ runner.workspace }}\dl
+      working-directory: ${{ runner.workspace }}
       # Note: After Cygwin is installed, its bash shell is used.
-      shell: bash --login --norc -eo pipefail -o igncr '{0}'
+      shell: bash --login --norc -eo pipefail '{0}'
       run: |
         mkdir -p "${DL_WORKSPACE}"
-        wget -O "${DL_WORKSPACE}/MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
-        "./dl/MEGAcmdSetup.exe" /S
+        wget -O "${DL_WORKSPACE}\\MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
         echo "$LOCALAPPDATA/MEGAcmd" >> $GITHUB_PATH
+
+    - name: Prepare for downloading from MEGA - install
+      working-directory: ${{ runner.workspace }}
+      shell: cmd
+      run: |
+        "${{ runner.workspace }}\dl\MEGAcmdSetup.exe" /S
 
     - name: Download IDA Pro SDK
       env:
-        DL_WORKSPACE: ${{ github.workspace }}/dl
-      working-directory: ${{ github.workspace }}
-      shell: bash --login --norc -eo pipefail -o igncr '{0}'
+        DL_WORKSPACE: ${{ runner.workspace }}\dl
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
       run: |
         mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
 
     - name: Create Build Environment
       env:
-        DL_WORKSPACE: ${{ github.workspace }}/dl
+        DL_WORKSPACE: ${{ runner.workspace }}\dl
         RUNNER_WORKSPACE: ${{ runner.workspace }}
-      working-directory: ${{ github.workspace }}
-      shell: bash --login --norc -eo pipefail -o igncr '{0}'
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
           "${DL_WORKSPACE}/idasdk75.zip"
         make -C ${RUNNER_WORKSPACE}/idasdk75 env
 
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        path: ${{ runner.workspace }}/idasdk75/plugins/loadmap
+
     - name: Build
-      working-directory: ${{ runner.workspace }}/
-      shell: bash --login --norc -eo pipefail -o igncr '{0}'
+      working-directory: ${{ github.workspace }}/
+      shell: bash --login --norc -eo pipefail '{0}'
       run: |
         make -C ${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap
