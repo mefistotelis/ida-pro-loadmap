@@ -126,4 +126,23 @@ jobs:
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
         make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 PLUGINS='loadmap' loadmap
-        ls -l "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap"
+
+    - name: Make package
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        PKG_WORKSPACE: ${{ github.workspace }}/pkg
+      working-directory: ${{ github.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        mkdir -p "${PKG_WORKSPACE}/plugins"
+        mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk75/bin/plugins/loadmap"*
+        cp "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap/docs/readme.txt" "${PKG_WORKSPACE}/readme-loadmap.txt"
+        VER_BUILD=$(git rev-list --count HEAD)
+        7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"*
+        echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida75-win32" >> $GITHUB_ENV
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.PKG_NAME }}
+        path: ${{ github.workspace }}/pkg/*.zip
