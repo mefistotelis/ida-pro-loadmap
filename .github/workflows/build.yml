@@ -90,12 +90,16 @@ jobs:
         sed -i \
           -e 's/^\(.*\)\$[\(]error \(Only 32-bit.*\)[\)]$/\1$(warning \2)/' \
           -e 's/\$\$[\(]shell cygpath -d \$[\(]2[\)] 2>\/dev\/null[\)]/$$(shell cygpath -d '\''$(2)'\'' 2>\/dev\/null)/' \
-          -e 's/^[ ]*\(\$\$[\(]if \$[\(]strip \$\$[\(]\$[\(]1[\)][\)][\)],,\$\$[\(]error.*\)$/    $$(info require_path after cygpath: $$($(1)) in allmake.mak)\n    \1/' \
+          -e 's/^[ ]*\(\$\$[\(]if \$[\(]strip \$\$[\(]\$[\(]1[\)][\)][\)],,\$\$[\(]error.*\)$/    $$(info allmake.mak: DEBUG: require_path after cygpath: $(1)='\''$$($(1))'\'')\n    \1/' \
+          -e 's/^[ ]*\(\$[\(]eval \$[\(]call fix_var,WindowsSdkDir[\)][\)]\)$/    \1\n    $(info allmake.mak: DEBUG: after fix_var: WindowsSdkDir=$(WindowsSdkDir))/' \
           "${RUNNER_WORKSPACE}/idasdk75/allmake.mak"
         echo "use cygpath $(cygpath -d 'C:\Program Files (x86)\Windows Kits\10\')"
         ls -l $(cygpath -d 'C:\Program Files (x86)\Windows Kits\10') || true
+        # Prepare environment config file; supply all paths as the default ones are wrapped
+        # with single quotes which `make` does not interpret. Because this is how `make` works.
+        # Now I understand why the SDK is not public; would be embarrassed by that level of coding as well.
         make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 \
-          PROGRAMFILES='C:\Program Files (x86)' \
+          WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
           VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
           env
 
