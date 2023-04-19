@@ -139,7 +139,7 @@ static void showOptionsDlg(void)
  ////////////////////////////////////////////////////////////////////////////////
 int idaapi init(void)
 {
-    msg("\nLoadMap: Plugin v%s init.\n\n",PLUG_VERSION);
+    msg("\nLoadMap: Plugin v%s init.\n\n", PLUG_VERSION);
 
     // Get the full path to user config dir
 	qstrncpy(g_szIniPath, get_user_idadir(), sizeof(g_szIniPath));
@@ -438,7 +438,7 @@ bool idaapi run(size_t)
 ////////////////////////////////////////////////////////////////////////////////
 void idaapi term(void)
 {
-    msg("LoadMap: Plugin v%s terminate.\n",PLUG_VERSION);
+    msg("LoadMap: Plugin v%s terminate.\n", PLUG_VERSION);
 
     // Write the plugin's options to cfg file
     /*_VERIFY(WritePrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey, &g_options,
@@ -454,7 +454,7 @@ void idaapi term(void)
 char wanted_name[]   = "Load Symbols From MAP File";
 char wanted_hotkey[] = "Ctrl-M";
 char comment[]       = "LoadMap loads symbols from a VC/BC/Watcom/Dede map file.";
-char help[]          = "LoadMap "PLUG_VERSION", Visual C/Borland C/Watcom C/Dede map file import plugin."
+char help[]          = "LoadMap " PLUG_VERSION ", Visual C/Borland C/Watcom C/Dede map file import plugin."
                               "This module reads selected map file, and loads symbols\n"
                               "into IDA database. Click it while holding Shift to see options.";
 /// @}
