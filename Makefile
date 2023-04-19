@@ -2,6 +2,9 @@ PROC=loadmap
 O1=MAPReader
 O2=stdafx
 
+# required for GetAsyncKeyState()
+STDLIBS += User32.lib
+
 include ../plugin.mak
 
 # MAKEDEP dependency list ------------------
