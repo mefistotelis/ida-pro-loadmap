@@ -137,7 +137,7 @@ static void showOptionsDlg(void)
 /// @author TQN
 /// @date 2004.09.11
  ////////////////////////////////////////////////////////////////////////////////
-int idaapi init(void)
+static plugmod_t *idaapi init()
 {
     msg("\nLoadMap: Plugin v%s init.\n\n", PLUG_VERSION);
 
