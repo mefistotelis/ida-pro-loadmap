@@ -46,7 +46,7 @@ jobs:
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
       with:
-        packages: wget make sed
+        packages: wget make sed qt5-devel-tools
 
     - name: Prepare for downloading from MEGA - wget
       env:
@@ -84,9 +84,20 @@ jobs:
         7z x "-o${RUNNER_WORKSPACE}/" \
           "${DL_WORKSPACE}/idasdk75.zip"
         # Why does the SDK care how many bits the make has?
-        sed -i 's/^\(.*\)\$[\(]error \(Only 32-bit.*\)[\)]$/\1$(warning \2)/' \
+        # Because Hex-Rays cannot learn how to use cygpath correctly?
+        # (1) you give it quoted path (2) you don't fight with it
+        # making your own modifications, use the tool for full conversion
+        sed -i \
+          -e 's/^\(.*\)\$[\(]error \(Only 32-bit.*\)[\)]$/\1$(warning \2)/' \
+          -e 's/\$\$[\(]shell cygpath -d \$[\(]2[\)] 2>\/dev\/null[\)]/$$(shell cygpath -d '\''$(2)'\'' 2>\/dev\/null)/' \
+          -e 's/^[ ]*\(\$\$[\(]if \$[\(]strip \$\$[\(]\$[\(]1[\)][\)][\)],,\$\$[\(]error.*\)$/    $$(info require_path after cygpath: $$($(1)) in allmake.mak)\n    \1/' \
           "${RUNNER_WORKSPACE}/idasdk75/allmake.mak"
-        make -C ${RUNNER_WORKSPACE}/idasdk75 V=1 env
+        echo "use cygpath $(cygpath -d 'C:\Program Files (x86)\Windows Kits\10\')"
+        ls -l $(cygpath -d 'C:\Program Files (x86)\Windows Kits\10') || true
+        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 \
+          PROGRAMFILES='C:\Program Files (x86)' \
+          VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
+          env
 
     - name: Checkout repository
       uses: actions/checkout@v3
