@@ -130,13 +130,14 @@ jobs:
     - name: Make package
       env:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
+        REPO_WORKSPACE: ${{ github.workspace }}
         PKG_WORKSPACE: ${{ github.workspace }}/pkg
       working-directory: ${{ github.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
         mkdir -p "${PKG_WORKSPACE}/plugins"
         mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk75/bin/plugins/loadmap"*
-        cp "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap/docs/readme.txt" "${PKG_WORKSPACE}/readme-loadmap.txt"
+        cp "${REPO_WORKSPACE}/README.md" "${PKG_WORKSPACE}/readme-loadmap.md"
         VER_BUILD=$(git rev-list --count HEAD)
         7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"*
         echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida75-win32" >> $GITHUB_ENV
