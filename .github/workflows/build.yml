@@ -117,7 +117,7 @@ jobs:
         # to workaround that, we are using this step to move the repo content.
         # We also can't move the whole directory at that upsets Githib scripts.
         mkdir -p "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap"
-        mv -t "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap" "${REPO_WORKSPACE}"/*
+        mv -t "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap" "${REPO_WORKSPACE}/src" "${REPO_WORKSPACE}/Makefile"
 
     - name: Build
       env:
