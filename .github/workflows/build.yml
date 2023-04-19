@@ -105,6 +105,7 @@ jobs:
         # The Github Workspace is a sub-directory of runner workspace,
         # ie. '${{ runner.workspace }}/ida-pro-loadmap'
         path: ${{ github.workspace }}
+        fetch-depth: 0
 
     - name: Move the plugin repo into SDK
       env:
@@ -138,7 +139,7 @@ jobs:
         mkdir -p "${PKG_WORKSPACE}/plugins"
         mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk75/bin/plugins/loadmap"*
         cp "${REPO_WORKSPACE}/README.md" "${PKG_WORKSPACE}/readme-loadmap.md"
-        VER_BUILD=$(git rev-list --count HEAD)
+        VER_BUILD=$(git -C "${REPO_WORKSPACE}" rev-list --count HEAD)
         7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"*
         echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida75-win32" >> $GITHUB_ENV
 
