@@ -120,7 +120,10 @@ jobs:
         mv -t "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap" "${REPO_WORKSPACE}"/*
 
     - name: Build
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ runner.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
-        make -C ${RUNNER_WORKSPACE}/idasdk75 V=1 loadmap.dll
+        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 PLUGINS='loadmap' loadmap
+        ls -l "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap"
