@@ -1,7 +1,7 @@
 PROC=loadmap
 
 # we explicitly added our module targets
-NO_DEFAULT_TARGETS = 1
+#NO_DEFAULT_TARGETS = 1
 
 include ../plugin.mak
 
@@ -13,7 +13,9 @@ $(F)loadmap$(O)   : $(I)bitrange.hpp $(I)bytes.hpp $(I)config.hpp $(I)fpro.h  \
 	          $(I)ua.hpp $(I)xref.hpp \
 	          src/loadmap.cpp src/MAPReader.cpp src/stdafx.cpp
 
-BASE_OBJS += $(F)loadmap$(O) $(F)MAPReader$(O) $(F)stdafx$(O)
+#BASE_OBJS += $(F)loadmap$(O) # already defined by default target
+BASE_OBJS += $(F)MAPReader$(O) $(F)stdafx$(O)
 
+# Copy of the standard idasdk rule, but this one allows src directory
 $(F)%$(O): src/%.cpp
 	$(strip $(QCXX)$(CXX) $(CXXFLAGS) $(NORTTI) $(CONLY) $(OBJSW)$@ $<)
