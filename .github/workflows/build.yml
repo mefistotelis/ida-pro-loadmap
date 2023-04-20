@@ -1,4 +1,11 @@
 # This workflow will build the IDA Pro plugin
+# Created by Mefistotelis for `loadmap` plugin
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License.
+
+# IDA Pro SDK by Hex-rays is required to use this software; that
+# SDK has more complex licensing situation, and is not under GPL.
 
 name: Build IDA plugin
 
