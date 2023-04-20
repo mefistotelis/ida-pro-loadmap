@@ -74,7 +74,11 @@ static char g_szLoadMapSection[] = "LoadMap";
 static char g_szOptionsKey[] = "Options";
 /// @}
 
+#ifdef __EA64__
+void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long long linear_addr)
+#else
 void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr)
+#endif
 {
     sym.seg = get_segm_num(linear_addr);
     segment_t * sseg = getnseg((int) sym.seg);
@@ -365,45 +369,42 @@ bool idaapi run(size_t)
                 bNameApply = false;
             }
 
-            unsigned long la = sym.addr + getnseg((int) sym.seg)->start_ea;
+            ea_t la = sym.addr + getnseg((int) sym.seg)->start_ea;
             flags_t f = get_full_flags(la);
 
+            bool didOk;
             if (bNameApply) // Apply symbols for name
             {
                 //  Add name if there's no meaningful name assigned.
                 if (g_options.bReplace ||
                     (!has_name(f) || has_dummy_name(f) || has_auto_name(f)))
                 {
-                    if (set_name(la, pname, SN_NOCHECK | SN_NOWARN))
-                    {
-                        showMsg("%04X:%08X - Change name to '%s' succeeded\n",
-                            sym.seg, la, pname);
-                        validSyms++;
-                    }
-                    else
-                    {
-                        showMsg("%04X:%08X - Change name to '%s' failed\n",
-                            sym.seg, la, pname);
-                        invalidSyms++;
-                    }
+                    didOk = set_name(la, pname, SN_NOCHECK | SN_NOWARN);
+#ifdef __EA64__
+                    showMsg("%04lX:%08llX - Change name to '%s' %s\n",
+                        sym.seg, la, pname, didOk ? "succeeded" : "failed");
+#else
+                    showMsg("%04lX:%08lX - Change name to '%s' %s\n",
+                        sym.seg, la, pname, didOk ? "succeeded" : "failed");
+#endif
                 }
             }
             else if (g_options.bReplace || !has_cmt(f))
             {
                 // Apply symbols for comment
-                if (set_cmt(la, pname, false))
-                {
-                    showMsg("%04X:%08X - Change comment to '%s' succeeded\n",
-                        sym.seg, la, pname);
-                    validSyms++;
-                }
-                else
-                {
-                    showMsg("%04X:%08X - Change comment to '%s' failed\n",
-                        sym.seg, la, pname);
-                    invalidSyms++;
-                }
+                didOk = set_cmt(la, pname, false);
+#ifdef __EA64__
+                showMsg("%04lX:%08llX - Change comment to '%s' %s\n",
+                    sym.seg, la, pname, didOk ? "succeeded" : "failed");
+#else
+                showMsg("%04lX:%08lX - Change comment to '%s' %s\n",
+                    sym.seg, la, pname, didOk ? "succeeded" : "failed");
+#endif
             }
+            if (didOk)
+                validSyms++;
+            else
+                invalidSyms++;
         }
 
     }

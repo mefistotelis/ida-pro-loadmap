@@ -49,7 +49,11 @@ typedef enum {
 
 typedef struct {
     unsigned long seg;
+#ifdef __EA64__
+    unsigned long long addr;
+#else
     unsigned long addr;
+#endif
     char name[MAXNAMELEN + 1];
 } MAPSymbol;
 
@@ -65,7 +69,11 @@ MapFile::ParseResult parseGccSymbolLine(MapFile::MAPSymbol &sym, const char *pLi
 
 };
 
-// Converts address in linear form into seg:offs, using IDA sections list
+// Converts address in linear form into seg:offs, using target executable sections list
+#ifdef __EA64__
+void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long long linear_addr);
+#else
 void linearAddressToSymbolAddr(MapFile::MAPSymbol &sym, unsigned long linear_addr);
+#endif
 
 #endif

@@ -266,7 +266,12 @@ MapFile::ParseResult MapFile::parseMsSymbolLine(MapFile::MAPSymbol &sym, const c
         return MapFile::COMMENT_LINE;
     }
     sym.addr = -1;
-    int ret = sscanf(dupLine, " %04X : %08X %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
+    int ret;
+#ifdef __EA64__
+    ret = sscanf(dupLine, " %04lX : %016llX %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
+#else
+    ret = sscanf(dupLine, " %04lX : %08lX %[^\t\n ;]", &sym.seg, &sym.addr, sym.name);
+#endif
     std::free(dupLine);
     if (3 != ret)
     {
@@ -323,7 +328,12 @@ MapFile::ParseResult MapFile::parseWatcomSymbolLine(MapFile::MAPSymbol &sym, con
         std::free(dupLine);
         return MapFile::COMMENT_LINE;
     }
-    int ret = sscanf(dupLine, " %04X : %08X%*c %[^\t\n;]", &sym.seg, &sym.addr, sym.name);
+    int ret;
+#ifdef __EA64__
+    ret = sscanf(dupLine, " %04lX : %016llX%*c %[^\t\n;]", &sym.seg, &sym.addr, sym.name);
+#else
+    ret = sscanf(dupLine, " %04lX : %08lX%*c %[^\t\n;]", &sym.seg, &sym.addr, sym.name);
+#endif
     std::free(dupLine);
     if (3 != ret)
     {
@@ -387,8 +397,14 @@ MapFile::ParseResult MapFile::parseGccSymbolLine(MapFile::MAPSymbol &sym, const 
         std::free(dupLine);
         return MapFile::COMMENT_LINE;
     }
+    int ret;
+#ifdef __EA64__
+    unsigned long long linear_addr;
+    ret = sscanf(dupLine, " 0x%016llX%*c %[^\t\n;]", &linear_addr, sym.name);
+#else
     unsigned long linear_addr;
-    int ret = sscanf(dupLine, " 0x%08X%*c %[^\t\n;]", &linear_addr, sym.name);
+    ret = sscanf(dupLine, " 0x%08lX%*c %[^\t\n;]", &linear_addr, sym.name);
+#endif
     std::free(dupLine);
     if (2 != ret)
     {
