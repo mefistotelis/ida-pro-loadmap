@@ -139,12 +139,12 @@ jobs:
         mkdir -p "${PKG_WORKSPACE}/plugins"
         mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk75/bin/plugins/loadmap"*
         cp "${REPO_WORKSPACE}/README.md" "${PKG_WORKSPACE}/readme-loadmap.md"
+        #7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"* # do not compress, or upload will do that again
         VER_BUILD=$(git -C "${REPO_WORKSPACE}" rev-list --count HEAD)
-        7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"*
         echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida75-win32" >> $GITHUB_ENV
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PKG_NAME }}
-        path: ${{ github.workspace }}/pkg/*.zip
+        path: ${{ github.workspace }}/pkg/*
