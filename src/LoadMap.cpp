@@ -55,16 +55,14 @@ typedef struct _tagPLUGIN_OPTIONS {
 
 const size_t g_minLineLen = 14; // For a "xxxx:xxxxxxxx " line
 
-static char g_szIniPath[MAXPATH] = { 0 };
-
 /// @brief Global variable for options of plugin
 static PLUGIN_OPTIONS g_options = { 0 };
 
 static const cfgopt_t g_optsinfo[] =
 {
-	cfgopt_t("NAME_APPLY", &g_options.bNameApply, 0, 1),
+    cfgopt_t("NAME_APPLY", &g_options.bNameApply, 0, 1),
     cfgopt_t("REPLACE_EXISTING", &g_options.bReplace, 0, 1),
-	cfgopt_t("VERBOSE_MESSAGES", &g_options.bVerbose, 0, 1),
+    cfgopt_t("VERBOSE_MESSAGES", &g_options.bVerbose, 0, 1),
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -138,6 +136,50 @@ static void showOptionsDlg(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// @brief Write-side equivalent of read_config_file() from IDA API
+/// @return True if saved
+/// @author TL
+/// @date 2023.11.22
+ ////////////////////////////////////////////////////////////////////////////////
+bool write_config_file(
+        const char *filename,
+        const cfgopt_t opts[],
+        size_t nopts)
+{
+    char szLine[120];
+    char szIniPath[MAXPATH] = { 0 };
+    int fh, i;
+
+    // Get the full path to user config dir
+    qstrncpy(szIniPath, get_user_idadir(), sizeof(szIniPath));
+    qstrncat(szIniPath, "/", sizeof(szIniPath));
+    qstrncat(szIniPath, filename, sizeof(szIniPath));
+    qstrncat(szIniPath, ".cfg", sizeof(szIniPath));
+    szIniPath[sizeof(szIniPath) - 1] = '\0';
+
+    fh = qopen(szIniPath, O_CREAT|O_WRONLY|O_TRUNC);
+    if (!fh)
+        return false;
+
+    qsnprintf(szLine, sizeof(szLine), ";\n; LoadMap Plugin auto-saved configuration file\n;\n");
+    qwrite(fh, szLine, qstrlen(szLine));
+
+    // Write config in normal IDA format (like the files in IDA/cfg folder).
+    // IDA Pro does not provide an API for that - only for reading.
+
+    for (i = 0; i < nopts; i++)
+    {
+        const cfgopt_t *opt = &opts[i];
+
+        qsnprintf(szLine, sizeof(szLine), "%s = %d\n", opt->name, *(int *)(opt->ptr));
+        qwrite(fh, szLine, qstrlen(szLine));
+    }
+    qclose(fh);
+
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 /// @brief Plugin initialize function
 /// @return PLUGIN_KEEP always
 /// @author TQN
@@ -147,12 +189,8 @@ static plugmod_t *idaapi init()
 {
     msg("\nLoadMap: Plugin v%s init.\n\n", PLUG_VERSION);
 
-    // Get the full path to user config dir
-	qstrncpy(g_szIniPath, get_user_idadir(), sizeof(g_szIniPath));
-	qstrncat(g_szIniPath, "loadmap.cfg", sizeof(g_szIniPath));
-    g_szIniPath[sizeof(g_szIniPath) - 1] = '\0';
-
-    // Get options saved in cfg file
+    // Get options saved in cfg file; IDA Pro will find the file, it does
+    // not need the full path nor extension, only base name.
     read_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo), NULL);
 
     switch (inf.filetype)
@@ -445,11 +483,7 @@ void idaapi term(void)
     msg("LoadMap: Plugin v%s terminate.\n", PLUG_VERSION);
 
     // Write the plugin's options to cfg file
-    /*_VERIFY(WritePrivateProfileStruct(g_szLoadMapSection, g_szOptionsKey, &g_options,
-                                      sizeof(g_options), g_szIniPath));
-    The old, windows-centric way is now disabled. Instead, we should open g_szIniPath
-    and write config in normal IDA format (like the files in IDA/cfg filder).
-    */
+    write_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
