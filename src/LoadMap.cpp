@@ -378,7 +378,7 @@ bool idaapi run(size_t)
                 continue;
             }
             // If shouldn't apply names
-            bool bNameApply = g_options.bNameApply;
+            bool bNameApply = (g_options.bNameApply != 0);
             if (parsed == MapFile::COMMENT_LINE)
             {
                 qsnprintf(fmt, sizeof(fmt), "Comment line: %%.%ds.\n", lineLen);
