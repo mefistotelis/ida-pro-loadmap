@@ -105,6 +105,11 @@ jobs:
           WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
           VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
           env
+        # Do the same for EA64 version (it will create separate cfg files, except the paths file)
+        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 __EA64__=1 \
+          WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
+          VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
+          env
 
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -127,13 +132,21 @@ jobs:
         mkdir -p "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap"
         mv -t "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap" "${REPO_WORKSPACE}/src" "${REPO_WORKSPACE}/Makefile"
 
-    - name: Build
+    - name: Build for EA32
       env:
         RUNNER_WORKSPACE: ${{ runner.workspace }}
       working-directory: ${{ runner.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
         make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 PLUGINS='loadmap' loadmap
+
+    - name: Build for EA64
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 __EA64__=1 PLUGINS='loadmap' loadmap
 
     - name: Make package
       env:
