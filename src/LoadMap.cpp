@@ -162,7 +162,7 @@ bool write_config_file(
     if (fh == -1)
         return false;
 
-    qsnprintf(szLine, sizeof(szLine), ";\n; LoadMap Plugin auto-saved configuration file\n;\n");
+    qsnprintf(szLine, sizeof(szLine), "//\n// LoadMap Plugin auto-saved configuration file\n//\n");
     qwrite(fh, szLine, qstrlen(szLine));
 
     // Write config in normal IDA format (like the files in IDA/cfg folder).
