@@ -44,6 +44,7 @@
 #include <name.hpp>
 #include <entry.hpp>
 #include <fpro.h>
+#include <err.h> // for qerrstr()
 #include <prodir.h> // just for MAXPATH
 
 
@@ -158,7 +159,7 @@ bool write_config_file(
     szIniPath[sizeof(szIniPath) - 1] = '\0';
 
     fh = qopen(szIniPath, O_CREAT|O_WRONLY|O_TRUNC);
-    if (!fh)
+    if (fh == -1)
         return false;
 
     qsnprintf(szLine, sizeof(szLine), ";\n; LoadMap Plugin auto-saved configuration file\n;\n");
@@ -191,7 +192,10 @@ static plugmod_t *idaapi init()
 
     // Get options saved in cfg file; IDA Pro will find the file, it does
     // not need the full path nor extension, only base name.
-    read_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo), NULL);
+    if (!read_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo), NULL))
+    {
+        msg("LoadMap: Plugin config file '%s.cfg' read failed: %s.\n", "loadmap", qerrstr());
+    }
 
     switch (inf.filetype)
     {
@@ -483,7 +487,10 @@ void idaapi term(void)
     msg("LoadMap: Plugin v%s terminate.\n", PLUG_VERSION);
 
     // Write the plugin's options to cfg file
-    write_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo));
+    if (!write_config_file("loadmap", g_optsinfo, qnumber(g_optsinfo)))
+    {
+        msg("LoadMap: Plugin config file '%s.cfg' save failed: %s.\n", "loadmap", qerrstr());
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
