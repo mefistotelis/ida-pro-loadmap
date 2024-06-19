@@ -158,7 +158,7 @@ bool write_config_file(
     qstrncat(szIniPath, ".cfg", sizeof(szIniPath));
     szIniPath[sizeof(szIniPath) - 1] = '\0';
 
-    fh = qopen(szIniPath, O_CREAT|O_WRONLY|O_TRUNC);
+    fh = qcreate(szIniPath, 0644);
     if (fh == -1)
         return false;
 
