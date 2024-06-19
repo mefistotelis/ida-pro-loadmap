@@ -101,12 +101,13 @@ jobs:
         # Prepare environment config file; supply all paths, as the default ones are wrapped
         # with single quotes which `make` does not interpret. Because this is how `make` works.
         # Now I understand why the SDK is not public; would be embarrassed by that level of coding as well.
-        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 \
+        # The NDEBUG flag is required to build with redist DLLs, rather than "debug" ones which are only in full VS
+        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 NDEBUG=1 \
           WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
           VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
           env
         # Do the same for EA64 version (it will create separate cfg files, except the paths file)
-        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 __EA64__=1 \
+        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 NDEBUG=1 __EA64__=1 \
           WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
           VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
           env
@@ -138,7 +139,7 @@ jobs:
       working-directory: ${{ runner.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
-        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 PLUGINS='loadmap' loadmap
+        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 NDEBUG=1 PLUGINS='loadmap' loadmap
 
     - name: Build for EA64
       env:
@@ -146,7 +147,7 @@ jobs:
       working-directory: ${{ runner.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
-        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 __EA64__=1 PLUGINS='loadmap' loadmap
+        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 NDEBUG=1 __EA64__=1 PLUGINS='loadmap' loadmap
 
     - name: Make package
       env:
