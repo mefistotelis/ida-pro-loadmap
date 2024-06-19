@@ -34,6 +34,14 @@ To rebuilt the project on Windows using GUI, copy it to IDA SDK `plugins/loadmap
 
 To rebuilt the project from command line, check how the Github Actions do that. You will need some GNU tools including make, and VC compiler from Visual Studio.
 
+## Troubleshooting
+
+If the plugin does not show in "Edit" -> "Plugins", then:
+* Make sure you have a code project opened
+* Check IDA "Output" console, there should be a message either confirming the load or with error
+* If the "Output" console shows "Cannot load certain module", you probably lack Visual C++ Redistributable Package
+* Check the "Issues" tab of this project on Github for more info
+
 ## Known issues
 
 Currently it doesn't understand MAP files with 64-bit offsets - new versions of GCC produce files with such long offsets.
