@@ -35,19 +35,20 @@ jobs:
     steps:
     - name: Check secrets
       env: 
-        IDASDK_MEGA_DL: ${{ secrets.IDASDK_MEGA_DL }}
+        IDASDK75_MEGA_DL: ${{ secrets.IDASDK75_MEGA_DL }}
       working-directory: ${{ runner.workspace }}
-      if: ${{ env.IDASDK_MEGA_DL == '' }}
+      if: ${{ env.IDASDK75_MEGA_DL == '' }}
       # Note: This uses the bash shell included with Git on Windows.
       shell: bash
       run: |
-        echo the secret \"IDASDK_MEGA_DL\" has not been made
+        echo the secret \"IDASDK75_MEGA_DL\" has not been made
         echo please go to \"settings \> secrets \> actions\" to create it
+        echo set it to what is after \"file/\" in your download link
         exit 1
 
     - name: Mask the secrets
       run: |
-        echo "::add-mask::${{ secrets.IDASDK_MEGA_DL }}" 
+        echo "::add-mask::${{ secrets.IDASDK75_MEGA_DL }}"
 
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
@@ -78,7 +79,7 @@ jobs:
       # We are calling batch script here, so cmd is needed as shell
       shell: cmd
       run: |
-        mega-get "https://mega.nz/file/${{ secrets.IDASDK_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
+        mega-get "https://mega.nz/file/${{ secrets.IDASDK75_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
 
     - name: Create Build Environment
       env:
