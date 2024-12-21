@@ -19,7 +19,7 @@
 ///     IDA Pro SDK by Hex-rays is required to use this software; that
 ///     SDK has more complex licensing situation, and is not under GPL.
 ////////////////////////////////////////////////////////////////////////////////
-#define PLUG_VERSION "1.3"
+#define PLUG_VERSION "1.4"
 //  standard library headers.
 #include <cstdio>
 // Makes gcc stdlib to not define non-underscored versions of non-ANSI functions (ie memicmp, strlwr)
