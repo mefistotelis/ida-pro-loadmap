@@ -197,19 +197,16 @@ static plugmod_t *idaapi init()
         msg("LoadMap: Plugin config file '%s.cfg' read failed: %s.\n", "loadmap", qerrstr());
     }
 
+#if IDA_SDK_VERSION >= 800
+    switch (inf_get_filetype())
+#else
     switch (inf.filetype)
+#endif
     {
-    case f_PE:
-    case f_COFF:
-    case f_LE:
-    case f_LX:
-    case f_ELF:
-    case f_EXE:
-    case f_BIN:
-    case f_LOADER:
-        return PLUGIN_KEEP;
+    case f_ZIP:
+        return PLUGIN_SKIP;
     }
-    return PLUGIN_SKIP;
+    return PLUGIN_KEEP;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
