@@ -223,10 +223,17 @@ bool idaapi run(size_t)
 {
     static char mapFileName[_MAX_PATH] = { 0 };
 
-    // If user press shift key, show options dialog
-    if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-    {
-        showOptionsDlg();
+    { // If user press shift key, show options dialog
+#if IDA_SDK_VERSION >= 800
+        input_event_t input_event;
+        if (get_user_input_event(&input_event) && (input_event.modifiers & VES_SHIFT))
+#else
+        // Windows-only method
+        if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+#endif
+        {
+            showOptionsDlg();
+        }
     }
 
     unsigned long numOfSegs = get_segm_qty();
