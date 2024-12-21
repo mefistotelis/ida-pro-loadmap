@@ -1,0 +1,172 @@
+# This workflow will build the IDA Pro plugin
+# Created by Mefistotelis for `loadmap` plugin
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License.
+
+# IDA Pro SDK by Hex-rays is required to use this software; that
+# SDK has more complex licensing situation, and is not under GPL.
+
+name: Build IDA 7.x/8.x plugin
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    paths:
+      - src/**
+      - 'Makefile'
+      - .github/**
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-2019]
+
+    env:
+      SHELLOPTS: igncr
+
+    steps:
+    - name: Check secrets
+      env: 
+        IDASDK75_MEGA_DL: ${{ secrets.IDASDK75_MEGA_DL }}
+      working-directory: ${{ runner.workspace }}
+      if: ${{ env.IDASDK75_MEGA_DL == '' }}
+      # Note: This uses the bash shell included with Git on Windows.
+      shell: bash
+      run: |
+        echo the secret \"IDASDK75_MEGA_DL\" has not been made
+        echo please go to \"settings \> secrets \> actions\" to create it
+        echo set it to what is after \"file/\" in your download link
+        exit 1
+
+    - name: Mask the secrets
+      run: |
+        echo "::add-mask::${{ secrets.IDASDK75_MEGA_DL }}"
+
+    - name: Set up Cygwin
+      uses: egor-tensin/setup-cygwin@v4
+      with:
+        packages: wget make sed qt5-devel-tools
+
+    - name: Prepare for downloading from MEGA - wget
+      env:
+        DL_WORKSPACE: ${{ runner.workspace }}\dl
+      working-directory: ${{ runner.workspace }}
+      # Note: After Cygwin is installed, its bash shell is used.
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        mkdir -p "${DL_WORKSPACE}"
+        wget -O "${DL_WORKSPACE}\\MEGAcmdSetup.exe" "https://mega.nz/MEGAcmdSetup.exe"
+
+    - name: Prepare for downloading from MEGA - install
+      working-directory: ${{ runner.workspace }}
+      shell: cmd
+      run: |
+        "${{ runner.workspace }}\dl\MEGAcmdSetup.exe" /S
+        echo %LOCALAPPDATA%\MEGAcmd>> %GITHUB_PATH%
+
+    - name: Download IDA Pro SDK
+      env:
+        DL_WORKSPACE: ${{ runner.workspace }}\dl
+      working-directory: ${{ runner.workspace }}
+      # We are calling batch script here, so cmd is needed as shell
+      shell: cmd
+      run: |
+        mega-get "https://mega.nz/file/${{ secrets.IDASDK75_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
+
+    - name: Create Build Environment
+      env:
+        DL_WORKSPACE: ${{ runner.workspace }}\dl
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        7z x "-o${RUNNER_WORKSPACE}/" \
+          "${DL_WORKSPACE}/idasdk75.zip"
+        # Why does the SDK care how many bits the make has?
+        # Because Hex-Rays cannot learn how to use cygpath correctly?
+        # Easy rules: (1) you give it quoted path (2) you don't fight with it
+        # making your own modifications, use the tool for full conversion
+        sed -i \
+          -e 's/^\(.*\)\$[\(]error \(Only 32-bit.*\)[\)]$/\1$(warning \2)/' \
+          -e 's/\$\$[\(]shell cygpath -d \$[\(]2[\)] 2>\/dev\/null[\)]/$$(shell cygpath -d '\''$(2)'\'' 2>\/dev\/null)/' \
+          -e 's/^[ ]*\(\$\$[\(]if \$[\(]strip \$\$[\(]\$[\(]1[\)][\)][\)],,\$\$[\(]error.*\)$/    $$(info allmake.mak: DEBUG: require_path after cygpath: $(1)='\''$$($(1))'\'')\n    \1/' \
+          "${RUNNER_WORKSPACE}/idasdk75/allmake.mak"
+        # Prepare environment config file; supply all paths, as the default ones are wrapped
+        # with single quotes which `make` does not interpret. Because this is how `make` works.
+        # Now I understand why the SDK is not public; would be embarrassed by that level of coding as well.
+        # The NDEBUG flag is required to build with redist DLLs, rather than "debug" ones which are only in full VS
+        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 NDEBUG=1 \
+          WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
+          VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
+          env
+        # Do the same for EA64 version (it will create separate cfg files, except the paths file)
+        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 NDEBUG=1 __EA64__=1 \
+          WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
+          VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
+          env
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        # The Github Workspace is a sub-directory of runner workspace,
+        # ie. '${{ runner.workspace }}/ida-pro-loadmap'
+        path: ${{ github.workspace }}
+        fetch-depth: 0
+
+    - name: Move the plugin repo into SDK
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        REPO_WORKSPACE: ${{ github.workspace }}
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        # The checkout action doesn't allow us to place the repo where we want
+        # to workaround that, we are using this step to move the repo content.
+        # We also can't move the whole directory at that upsets Githib scripts.
+        mkdir -p "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap"
+        mv -t "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap" "${REPO_WORKSPACE}/src" "${REPO_WORKSPACE}/Makefile"
+
+    - name: Build for EA32
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 NDEBUG=1 PLUGINS='loadmap' loadmap
+
+    - name: Build for EA64
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+      working-directory: ${{ runner.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 NDEBUG=1 __EA64__=1 PLUGINS='loadmap' loadmap
+
+    - name: Make package
+      env:
+        RUNNER_WORKSPACE: ${{ runner.workspace }}
+        REPO_WORKSPACE: ${{ github.workspace }}
+        PKG_WORKSPACE: ${{ github.workspace }}/pkg
+      working-directory: ${{ github.workspace }}
+      shell: bash --login --norc -eo pipefail '{0}'
+      run: |
+        mkdir -p "${PKG_WORKSPACE}/plugins"
+        mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk75/bin/plugins/loadmap"*
+        cp "${REPO_WORKSPACE}/README.md" "${PKG_WORKSPACE}/readme-loadmap.md"
+        #7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"* # do not compress, or upload will do that again
+        VER_BUILD=$(git -C "${REPO_WORKSPACE}" rev-list --count HEAD)
+        echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida75-win32" >> $GITHUB_ENV
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.PKG_NAME }}
+        path: ${{ github.workspace }}/pkg/*

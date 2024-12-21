@@ -7,7 +7,7 @@
 # IDA Pro SDK by Hex-rays is required to use this software; that
 # SDK has more complex licensing situation, and is not under GPL.
 
-name: Build IDA plugin
+name: Build IDA 9.x plugin
 
 on:
   pull_request:
@@ -35,20 +35,20 @@ jobs:
     steps:
     - name: Check secrets
       env: 
-        IDASDK75_MEGA_DL: ${{ secrets.IDASDK75_MEGA_DL }}
+        IDASDK9_MEGA_DL: ${{ secrets.IDASDK9_MEGA_DL }}
       working-directory: ${{ runner.workspace }}
-      if: ${{ env.IDASDK75_MEGA_DL == '' }}
+      if: ${{ env.IDASDK9_MEGA_DL == '' }}
       # Note: This uses the bash shell included with Git on Windows.
       shell: bash
       run: |
-        echo the secret \"IDASDK75_MEGA_DL\" has not been made
+        echo the secret \"IDASDK9_MEGA_DL\" has not been made
         echo please go to \"settings \> secrets \> actions\" to create it
         echo set it to what is after \"file/\" in your download link
         exit 1
 
     - name: Mask the secrets
       run: |
-        echo "::add-mask::${{ secrets.IDASDK75_MEGA_DL }}"
+        echo "::add-mask::${{ secrets.IDASDK9_MEGA_DL }}"
 
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
@@ -79,7 +79,7 @@ jobs:
       # We are calling batch script here, so cmd is needed as shell
       shell: cmd
       run: |
-        mega-get "https://mega.nz/file/${{ secrets.IDASDK75_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
+        mega-get "https://mega.nz/file/${{ secrets.IDASDK9_MEGA_DL }}" "${{ env.DL_WORKSPACE }}"
 
     - name: Create Build Environment
       env:
@@ -89,7 +89,7 @@ jobs:
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
         7z x "-o${RUNNER_WORKSPACE}/" \
-          "${DL_WORKSPACE}/idasdk75.zip"
+          "${DL_WORKSPACE}/idasdk90.zip"
         # Why does the SDK care how many bits the make has?
         # Because Hex-Rays cannot learn how to use cygpath correctly?
         # Easy rules: (1) you give it quoted path (2) you don't fight with it
@@ -98,17 +98,17 @@ jobs:
           -e 's/^\(.*\)\$[\(]error \(Only 32-bit.*\)[\)]$/\1$(warning \2)/' \
           -e 's/\$\$[\(]shell cygpath -d \$[\(]2[\)] 2>\/dev\/null[\)]/$$(shell cygpath -d '\''$(2)'\'' 2>\/dev\/null)/' \
           -e 's/^[ ]*\(\$\$[\(]if \$[\(]strip \$\$[\(]\$[\(]1[\)][\)][\)],,\$\$[\(]error.*\)$/    $$(info allmake.mak: DEBUG: require_path after cygpath: $(1)='\''$$($(1))'\'')\n    \1/' \
-          "${RUNNER_WORKSPACE}/idasdk75/allmake.mak"
+          "${RUNNER_WORKSPACE}/idasdk90/allmake.mak"
         # Prepare environment config file; supply all paths, as the default ones are wrapped
         # with single quotes which `make` does not interpret. Because this is how `make` works.
         # Now I understand why the SDK is not public; would be embarrassed by that level of coding as well.
         # The NDEBUG flag is required to build with redist DLLs, rather than "debug" ones which are only in full VS
-        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 NDEBUG=1 \
+        make -C "${RUNNER_WORKSPACE}/idasdk90" V=1 NDEBUG=1 \
           WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
           VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
           env
         # Do the same for EA64 version (it will create separate cfg files, except the paths file)
-        make -C "${RUNNER_WORKSPACE}/idasdk75" V=1 NDEBUG=1 __EA64__=1 \
+        make -C "${RUNNER_WORKSPACE}/idasdk90" V=1 NDEBUG=1 __EA64__=1 \
           WindowsSdkDir='C:\Program Files (x86)\Windows Kits\10' \
           VCINSTALLDIR='C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC' \
           env
@@ -131,8 +131,8 @@ jobs:
         # The checkout action doesn't allow us to place the repo where we want
         # to workaround that, we are using this step to move the repo content.
         # We also can't move the whole directory at that upsets Githib scripts.
-        mkdir -p "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap"
-        mv -t "${RUNNER_WORKSPACE}/idasdk75/plugins/loadmap" "${REPO_WORKSPACE}/src" "${REPO_WORKSPACE}/Makefile"
+        mkdir -p "${RUNNER_WORKSPACE}/idasdk90/plugins/loadmap"
+        mv -t "${RUNNER_WORKSPACE}/idasdk90/plugins/loadmap" "${REPO_WORKSPACE}/src" "${REPO_WORKSPACE}/Makefile"
 
     - name: Build for EA32
       env:
@@ -140,7 +140,7 @@ jobs:
       working-directory: ${{ runner.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
-        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 NDEBUG=1 PLUGINS='loadmap' loadmap
+        make -C "${RUNNER_WORKSPACE}/idasdk90/plugins" V=1 NDEBUG=1 PLUGINS='loadmap' loadmap
 
     - name: Build for EA64
       env:
@@ -148,7 +148,7 @@ jobs:
       working-directory: ${{ runner.workspace }}
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
-        make -C "${RUNNER_WORKSPACE}/idasdk75/plugins" V=1 NDEBUG=1 __EA64__=1 PLUGINS='loadmap' loadmap
+        make -C "${RUNNER_WORKSPACE}/idasdk90/plugins" V=1 NDEBUG=1 __EA64__=1 PLUGINS='loadmap' loadmap
 
     - name: Make package
       env:
@@ -159,11 +159,11 @@ jobs:
       shell: bash --login --norc -eo pipefail '{0}'
       run: |
         mkdir -p "${PKG_WORKSPACE}/plugins"
-        mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk75/bin/plugins/loadmap"*
+        mv -t "${PKG_WORKSPACE}/plugins" "${RUNNER_WORKSPACE}/idasdk90/bin/plugins/loadmap"*
         cp "${REPO_WORKSPACE}/README.md" "${PKG_WORKSPACE}/readme-loadmap.md"
         #7z a "${PKG_WORKSPACE}/loadmap.zip" "${PKG_WORKSPACE}/"* # do not compress, or upload will do that again
         VER_BUILD=$(git -C "${REPO_WORKSPACE}" rev-list --count HEAD)
-        echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida75-win32" >> $GITHUB_ENV
+        echo "PKG_NAME=loadmap-v1_3_$VER_BUILD-plug-ida90-win32" >> $GITHUB_ENV
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
